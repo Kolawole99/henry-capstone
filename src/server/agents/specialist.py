@@ -4,6 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
+from langfuse import observe
 from src.server.models.schemas import UserQuery, RoutingDecision, AgentResponse
 from src.server.utils.vector_store import VectorStoreManager
 from src.server.utils.prompt_loader import load_prompt
@@ -13,6 +14,7 @@ class SpecialistAgent:
         base_url = os.getenv("OPENAI_BASE_URL")
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0, base_url=base_url)
         
+    @observe(name="specialist_generate_response", as_type="generation")
     def generate_response(self, query: UserQuery, routing: RoutingDecision, agent_id: str = None) -> AgentResponse:
         if agent_id:
             from ..api.database import SessionLocal, Agent

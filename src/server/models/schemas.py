@@ -7,9 +7,10 @@ class UserQuery(BaseModel):
     user_role: Optional[str] = Field(None, description="The role of the user asking (e.g., 'developer', 'hr_manager').")
 
 class RoutingDecision(BaseModel):
-    """Decision on which specialist agent to route the query to."""
-    department: Literal["HR", "TECH", "GENERAL"] = Field(..., description="The target department for the query.")
-    reasoning: str = Field(..., description="Explanation for why this department was chosen.")
+    """Decision on which agent to route the query to."""
+    agent_id: str = Field(..., description="The ID of the agent to route to.")
+    agent_name: str = Field(..., description="The name of the agent selected.")
+    reasoning: str = Field(..., description="Explanation for why this agent was chosen.")
     confidence: float = Field(..., description="Confidence score between 0.0 and 1.0.")
 
 class AgentResponse(BaseModel):

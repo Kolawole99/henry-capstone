@@ -69,7 +69,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         return ChatResponse(
             response=result["final_answer"],
             session_id=session_id,
-            department=result["department"],
+            department=result.get("agent_name", "General"),
             sources=result.get("sources", [])
         )
     except Exception as e:
