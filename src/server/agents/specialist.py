@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langfuse import observe
-from src.server.models.schemas import UserQuery, RoutingDecision, AgentResponse
+from src.server.models.schemas import UserQuery, RoutingDecision, AgentResponse, SourceChunk
 from src.server.utils.vector_store import VectorStoreManager
 from src.server.utils.prompt_loader import load_prompt
 
@@ -46,11 +46,23 @@ class SpecialistAgent:
 
         response = rag_chain.invoke({"input": query.query_text})
         
+        # Extract source file names
         sources = [doc.metadata.get("source", "unknown") for doc in response.get("context", [])]
         unique_sources = list(set(sources))
+        
+        # Extract source chunks with file names and content
+        source_chunks = []
+        for doc in response.get("context", []):
+            file_name = doc.metadata.get("source_file", doc.metadata.get("source", "unknown"))
+            content = doc.page_content[:500]  # Limit chunk content to 500 chars for display
+            source_chunks.append(SourceChunk(
+                file_name=file_name,
+                content=content
+            ))
 
         return AgentResponse(
             answer=response["answer"],
             sources=unique_sources,
+            source_chunks=source_chunks,
             agent_name=routing.agent_name
         )
