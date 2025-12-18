@@ -59,8 +59,8 @@ class VectorStoreManager:
         
         print(f"Ingested {len(splits)} chunks into ChromaDB.")
 
-    def ingest_file(self, filepath: str):
-        """Ingest a single file into the vector store."""
+    def ingest_file(self, filepath: str, file_id: str = None):
+        """Ingest a single file into the vector store with metadata for tracking."""
         if not self.client:
             raise ValueError("ChromaDB client not initialized. Is the Docker container running?")
         
@@ -79,6 +79,12 @@ class VectorStoreManager:
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_documents(docs)
         
+        # Add metadata to track which file these chunks came from
+        if file_id:
+            for doc in splits:
+                doc.metadata['file_id'] = file_id
+                doc.metadata['source_file'] = os.path.basename(filepath)
+        
         # Get or create vector store
         if not self.vector_store:
             self.vector_store = Chroma(
@@ -90,6 +96,43 @@ class VectorStoreManager:
         # Add documents
         self.vector_store.add_documents(documents=splits)
         print(f"Ingested {len(splits)} chunks from {os.path.basename(filepath)} into ChromaDB.")
+        return len(splits)
+
+    def delete_file(self, file_id: str):
+        """Delete all embeddings for a specific file from the vector store."""
+        if not self.client:
+            raise ValueError("ChromaDB client not initialized. Is the Docker container running?")
+        
+        # Get or create vector store
+        if not self.vector_store:
+            self.vector_store = Chroma(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding_function=self.embeddings,
+            )
+        
+        # Get the underlying collection
+        collection = self.vector_store._collection
+        
+        # Query for documents with this file_id
+        try:
+            # Get all documents with matching file_id metadata
+            results = collection.get(
+                where={"file_id": file_id}
+            )
+            
+            if results and results['ids']:
+                # Delete the documents by their IDs
+                collection.delete(ids=results['ids'])
+                deleted_count = len(results['ids'])
+                print(f"Deleted {deleted_count} chunks for file_id {file_id} from ChromaDB.")
+                return deleted_count
+            else:
+                print(f"No chunks found for file_id {file_id} in ChromaDB.")
+                return 0
+        except Exception as e:
+            print(f"Error deleting file from vector store: {e}")
+            raise
 
     def get_retriever(self):
         """Returns a retriever for the vector store."""

@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List
 import uuid
 
 from ..database import get_db, Agent
 from ...utils.agent_prompt_generator import generate_agent_prompt
 from ...utils.logger import get_logger, log_error
+from ...utils.validators import (
+    validate_agent_name,
+    validate_agent_description,
+    ValidationError as ValidatorError
+)
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -15,6 +20,22 @@ logger = get_logger(__name__)
 class AgentCreate(BaseModel):
     name: str
     description: str  # User's description of what agent should do
+    
+    @field_validator('name')
+    @classmethod
+    def validate_name_field(cls, v):
+        try:
+            return validate_agent_name(v)
+        except ValidatorError as e:
+            raise ValueError(str(e))
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description_field(cls, v):
+        try:
+            return validate_agent_description(v)
+        except ValidatorError as e:
+            raise ValueError(str(e))
 
 class AgentResponse(BaseModel):
     id: str

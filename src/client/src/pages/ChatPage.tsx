@@ -5,19 +5,42 @@ import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { api } from '../api/client';
 import type { Message } from '../api/client';
+import { validateMessage, MAX_MESSAGE_LENGTH } from '../utils/validators';
 
 export function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // Real-time validation
+    if (value.trim()) {
+      const result = validateMessage(value);
+      setValidationError(result.isValid ? null : result.error || null);
+    } else {
+      setValidationError(null);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    // Validate before sending
+    const validation = validateMessage(input);
+    if (!validation.isValid) {
+      setValidationError(validation.error || 'Invalid message');
+      return;
+    }
+
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setValidationError(null);
     setLoading(true);
 
     try {
@@ -57,6 +80,9 @@ export function ChatPage() {
       setLoading(false);
     }
   };
+
+  const characterCount = input.length;
+  const isValid = !validationError && input.trim().length > 0;
 
   return (
     <div className="flex flex-col max-w-4xl mx-auto p-4" style={{ height: 'calc(100vh - 60px)' }}>
@@ -104,17 +130,31 @@ export function ChatPage() {
         )}
       </Card>
 
-      <div className="flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Ask me anything..."
-          disabled={loading}
-        />
-        <Button onClick={handleSend} disabled={loading || !input.trim()}>
-          <Send className="w-4 h-4" />
-        </Button>
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={(e) => e.key === 'Enter' && isValid && !loading && handleSend()}
+              placeholder="Ask me anything..."
+              disabled={loading}
+              className={validationError ? 'border-destructive' : ''}
+            />
+          </div>
+          <Button onClick={handleSend} disabled={loading || !isValid}>
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex justify-between items-center text-xs">
+          {validationError ? (
+            <span className="text-destructive">{validationError}</span>
+          ) : (
+            <span className="text-muted-foreground">
+              {characterCount > 0 && `${characterCount} / ${MAX_MESSAGE_LENGTH} characters`}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

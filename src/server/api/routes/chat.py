@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 import uuid
 
 from ..database import get_db, ChatSession, ChatMessage
 from ...agents.coordinator import Coordinator
 from ...utils.logger import get_logger, log_error
+from ...utils.validators import (
+    validate_message,
+    validate_uuid,
+    ValidationError as ValidatorError
+)
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -25,6 +30,34 @@ class ChatRequest(BaseModel):
     message: str
     agent_id: Optional[str] = None
     session_id: Optional[str] = None
+    
+    @field_validator('message')
+    @classmethod
+    def validate_message_field(cls, v):
+        try:
+            return validate_message(v)
+        except ValidatorError as e:
+            raise ValueError(str(e))
+    
+    @field_validator('session_id')
+    @classmethod
+    def validate_session_id_field(cls, v):
+        if v is not None:
+            try:
+                return validate_uuid(v, "Session ID")
+            except ValidatorError as e:
+                raise ValueError(str(e))
+        return v
+    
+    @field_validator('agent_id')
+    @classmethod
+    def validate_agent_id_field(cls, v):
+        if v is not None:
+            try:
+                return validate_uuid(v, "Agent ID")
+            except ValidatorError as e:
+                raise ValueError(str(e))
+        return v
 
 class ChatResponse(BaseModel):
     response: str

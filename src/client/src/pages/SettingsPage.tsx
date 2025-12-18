@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Upload, Trash2, FileText, Sparkles } from 'lucide-react';
+import { Plus, Upload, Trash2, FileText, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
@@ -76,7 +76,7 @@ export function SettingsPage() {
     if (!selectedAgent) return;
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     setLoading(true);
     try {
       await api.uploadFileToAgent(selectedAgent.id, file);
@@ -115,11 +115,10 @@ export function SettingsPage() {
                 <div
                   key={agent.id}
                   onClick={() => setSelectedAgent(agent)}
-                  className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                    selectedAgent?.id === agent.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent'
-                  }`}
+                  className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedAgent?.id === agent.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent'
+                    }`}
                 >
                   <div className="font-medium">{agent.name}</div>
                   <div className="text-sm opacity-80 line-clamp-2">{agent.description}</div>
@@ -160,9 +159,9 @@ export function SettingsPage() {
                   AI will generate a specialized system prompt based on your description
                 </p>
               </div>
-              <Button 
-                onClick={handleCreateAgent} 
-                disabled={creating || !newAgent.name.trim() || !newAgent.description.trim()} 
+              <Button
+                onClick={handleCreateAgent}
+                disabled={creating || !newAgent.name.trim() || !newAgent.description.trim()}
                 className="w-full"
               >
                 {creating ? (
@@ -219,19 +218,31 @@ export function SettingsPage() {
                   <CardTitle>Upload Knowledge Files</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      type="file"
-                      onChange={handleFileUpload}
-                      accept=".txt,.pdf,.md"
-                      disabled={loading}
-                      className="flex-1"
-                    />
-                    <Upload className="w-5 h-5 text-muted-foreground" />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="file"
+                        onChange={handleFileUpload}
+                        accept=".txt,.pdf,.md,.docx,.doc"
+                        disabled={loading}
+                        className="flex-1"
+                      />
+                      {loading ? (
+                        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                      ) : (
+                        <Upload className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    {loading && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Uploading and processing file...</span>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Upload documents to give this agent context and knowledge
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Upload documents to give this agent context and knowledge
-                  </p>
                 </CardContent>
               </Card>
 

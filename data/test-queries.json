@@ -1,0 +1,56 @@
+{
+  "testQueries": [
+    {
+      "query": "How many vacation days do I get as a new employee?",
+      "description": "Basic PTO policy question"
+    },
+    {
+      "query": "I can't connect to the VPN from home. What should I do?",
+      "description": "VPN troubleshooting"
+    },
+    {
+      "query": "What's the limit for client dinner expenses?",
+      "description": "Expense policy question"
+    },
+    {
+      "query": "I need an NDA signed by a vendor. How do I proceed?",
+      "description": "NDA process question"
+    },
+    {
+      "query": "My laptop password isn't working and I'm locked out",
+      "description": "Password reset request"
+    },
+    {
+      "query": "When will I receive my expense reimbursement?",
+      "description": "Reimbursement timeline"
+    },
+    {
+      "query": "Can I work remotely full-time? What's the policy?",
+      "description": "Remote work policy"
+    },
+    {
+      "query": "What are our GDPR compliance obligations?",
+      "description": "Data privacy compliance"
+    },
+    {
+      "query": "How do I install Slack on my work computer?",
+      "description": "Software installation"
+    },
+    {
+      "query": "What's the deadline for performance reviews this year?",
+      "description": "Performance review process"
+    },
+    {
+      "query": "Do I need a contract reviewed before signing with this new vendor?",
+      "description": "Contract review process"
+    },
+    {
+      "query": "Can I expense my home internet since I work remotely?",
+      "description": "Remote work expense eligibility"
+    },
+    {
+      "query": "I want to get a device assigned to my direct report, as part of their onboarding, what should be the budget, and the onboarding process.",
+      "description": "Device assignment process"
+    }
+  ]
+}
