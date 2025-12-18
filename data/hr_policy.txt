@@ -1,0 +1,16 @@
+# Nexus-Mind HR Policy Manual
+
+## 1. Zero Tolerance Harassment Policy
+Nexus-Mind is committed to providing a safe workspace. We have a zero-tolerance policy for harassment of any kind.
+- **Reporting:** Any incidents should be immediately reported to hr@nexus.com or via the anonymous whistleblower portal.
+- **Consequences:** Substantiated claims typically result in immediate termination.
+
+## 2. Remote Work & Async Communication
+- We are a remote-first company.
+- **Core Hours:** All employees are expected to be available between 10 AM and 2 PM EST for synchronous meetings.
+- **Slack Etiquette:** Please use threads for discussions. Do not use @channel unless it is an emergency (system down).
+
+## 3. Leave & Time Off
+- **PTO:** Full-time employees receive 20 days of paid time off per year.
+- **Sick Leave:** 5 days of sick leave are provided.
+- **Maternity/Paternity:** 12 weeks of paid leave for primary caregivers.

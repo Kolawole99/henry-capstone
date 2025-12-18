@@ -1,0 +1,70 @@
+import os
+import chromadb
+from typing import List
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
+
+class VectorStoreManager:
+    def __init__(self, data_path: str = "data", collection_name: str = "nexus_mind_docs"):
+        self.data_path = data_path
+        self.collection_name = collection_name
+        base_url = os.getenv("OPENAI_BASE_URL")
+        self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", base_url=base_url)
+        self.vector_store = None
+        
+        chroma_host = os.getenv("CHROMA_HOST", "localhost")
+        chroma_port = int(os.getenv("CHROMA_PORT", "8000"))
+        
+        try:
+            self.client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
+            print(f"Connected to ChromaDB at {chroma_host}:{chroma_port}")
+        except Exception as e:
+            print(f"Failed to connect to ChromaDB: {e}")
+            self.client = None
+
+    def ingest_data(self):
+        """Loads data from the data directory and ingests into ChromaDB."""
+        if not self.client:
+            print("ChromaDB client not initialized. Is the Docker container running?")
+            return
+
+        if not os.path.exists(self.data_path):
+            print(f"Data directory {self.data_path} not found.")
+            return
+
+        # Load text files
+        loader = DirectoryLoader(self.data_path, glob="**/*.txt", loader_cls=TextLoader)
+        docs = loader.load()
+        
+        if not docs:
+            print("No documents found to ingest.")
+            return
+
+        # Split documents
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+
+        # Ingest into Chroma
+        self.vector_store = Chroma(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding_function=self.embeddings,
+        )
+        self.vector_store.add_documents(documents=splits)
+        
+        print(f"Ingested {len(splits)} chunks into ChromaDB.")
+
+    def get_retriever(self):
+        """Returns a retriever for the vector store."""
+        if not self.client:
+             raise ValueError("ChromaDB client is not available. Please start the Docker services.")
+
+        if not self.vector_store:
+            self.vector_store = Chroma(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding_function=self.embeddings,
+            )
+        return self.vector_store.as_retriever(search_kwargs={"k": 3})
