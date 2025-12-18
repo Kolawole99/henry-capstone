@@ -14,24 +14,23 @@ class SpecialistAgent:
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0, base_url=base_url)
         
     def generate_response(self, query: UserQuery, routing: RoutingDecision, agent_id: str = None) -> AgentResponse:
-        # Load department-specific prompt
-        prompt_file_map = {
-            "HR": "specialist_hr",
-            "TECH": "specialist_tech",
-            "GENERAL": "specialist_general"
-        }
-        
-        prompt_name = prompt_file_map.get(routing.department, "specialist_general")
-        dept_context = load_prompt(prompt_name)
-
-        system_prompt = f"{dept_context}\n\n{{context}}"
-        
-        # Create agent-specific retriever if agent_id provided
         if agent_id:
+            from ..api.database import SessionLocal, Agent
+            
+            db = SessionLocal()
+            try:
+                agent = db.query(Agent).filter(Agent.id == agent_id).first()
+                if agent and agent.system_prompt:
+                    system_prompt = f"{agent.system_prompt}\n\n{{context}}"
+                else:
+                    system_prompt = "You are a helpful assistant.\n\n{context}"
+            finally:
+                db.close()
+            
             vector_store_manager = VectorStoreManager(agent_id=agent_id)
             retriever = vector_store_manager.get_retriever()
         else:
-            # Fallback to general collection if no agent specified
+            system_prompt = "You are a helpful assistant.\n\n{context}"
             vector_store_manager = VectorStoreManager()
             retriever = vector_store_manager.get_retriever()
 
@@ -45,7 +44,6 @@ class SpecialistAgent:
 
         response = rag_chain.invoke({"input": query.query_text})
         
-        # Extract sources
         sources = [doc.metadata.get("source", "unknown") for doc in response.get("context", [])]
         unique_sources = list(set(sources))
 

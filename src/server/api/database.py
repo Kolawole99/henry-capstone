@@ -4,8 +4,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, F
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
-# Database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5439/henry_capstone")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create engine
 engine = create_engine(DATABASE_URL)
@@ -21,7 +20,7 @@ class Agent(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     description = Column(Text)
-    department = Column(String, nullable=False)  # HR, TECH, GENERAL
+    system_prompt = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship to files
@@ -53,7 +52,7 @@ class ChatMessage(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
-    role = Column(String, nullable=False)  # user or assistant
+    role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -9,7 +9,7 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
-  department: 'HR' | 'TECH' | 'GENERAL';
+  system_prompt: string;
 }
 
 export interface FileInfo {
@@ -35,7 +35,7 @@ export const api = {
     return response.json();
   },
 
-  async createAgent(agent: Omit<Agent, 'id'>): Promise<Agent> {
+  async createAgent(agent: Omit<Agent, 'id' | 'system_prompt'>): Promise<Agent> {
     const response = await fetch(`${API_BASE_URL}/agents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
