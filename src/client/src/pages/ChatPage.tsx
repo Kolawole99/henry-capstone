@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Bot } from 'lucide-react';
+import { Send, Bot, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
@@ -94,11 +94,10 @@ export function ChatPage() {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-lg px-4 py-2">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce delay-200" />
+            <div className="bg-muted rounded-lg px-4 py-3 max-w-[80%]">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">AI is thinking...</span>
               </div>
             </div>
           </div>
