@@ -1,5 +1,5 @@
 # Nexus-Mind Docker Compose Configuration
-# Services: ChromaDB, PostgreSQL, Langfuse
+# Services: ChromaDB, PostgreSQL
 
 services:
   postgres:
@@ -41,30 +41,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  langfuse-server:
-    image: langfuse/langfuse:2
-    container_name: henry-langfuse
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${LANGFUSE_DB:-langfuse}
-      NEXTAUTH_URL: ${LANGFUSE_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${LANGFUSE_SECRET:-changeme-generate-a-secure-secret}
-      SALT: ${LANGFUSE_SALT:-changeme-generate-a-secure-salt}
-      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY:-true}
-      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: ${LANGFUSE_EXPERIMENTAL:-false}
-    ports:
-      - "${LANGFUSE_PORT:-3000}:3000"
-    networks:
-      - henry-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/public/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
   henry-network:
