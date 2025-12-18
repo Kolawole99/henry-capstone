@@ -23,6 +23,9 @@ class Agent(Base):
     description = Column(Text)
     department = Column(String, nullable=False)  # HR, TECH, GENERAL
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to files
+    files = relationship("File", back_populates="agent", cascade="all, delete-orphan")
 
 class File(Base):
     __tablename__ = "files"
@@ -31,7 +34,11 @@ class File(Base):
     name = Column(String, nullable=False)
     filepath = Column(String, nullable=False)
     size = Column(BigInteger, nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to agent
+    agent = relationship("Agent", back_populates="files")
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"

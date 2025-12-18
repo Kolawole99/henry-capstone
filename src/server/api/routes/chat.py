@@ -54,7 +54,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         
         # Get AI response from coordinator
         coord = get_coordinator()
-        result = coord.process_query(request.message)
+        result = coord.process_query(request.message, agent_id=request.agent_id)
         
         # Store assistant message
         assistant_message = ChatMessage(

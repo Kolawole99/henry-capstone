@@ -6,7 +6,7 @@ import uuid
 import os
 import shutil
 
-from ..database import get_db, File
+from ..database import get_db, File, Agent
 from ...utils.vector_store import VectorStoreManager
 
 router = APIRouter()
@@ -14,15 +14,6 @@ router = APIRouter()
 # Upload directory
 UPLOAD_DIR = "data/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Initialize vector store manager (singleton)
-vector_store_manager = None
-
-def get_vector_store_manager():
-    global vector_store_manager
-    if vector_store_manager is None:
-        vector_store_manager = VectorStoreManager()
-    return vector_store_manager
 
 # Response models
 class FileResponse(BaseModel):
@@ -34,10 +25,15 @@ class FileResponse(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/files", response_model=List[FileResponse])
-async def list_files(db: Session = Depends(get_db)):
-    """Get all uploaded files"""
-    files = db.query(File).all()
+@router.get("/agents/{agent_id}/files", response_model=List[FileResponse])
+async def list_agent_files(agent_id: str, db: Session = Depends(get_db)):
+    """Get all files for a specific agent"""
+    # Verify agent exists
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    files = db.query(File).filter(File.agent_id == agent_id).all()
     return [
         FileResponse(
             id=f.id,
@@ -48,9 +44,18 @@ async def list_files(db: Session = Depends(get_db)):
         for f in files
     ]
 
-@router.post("/files", response_model=FileResponse)
-async def upload_file(file: UploadFile = FastAPIFile(...), db: Session = Depends(get_db)):
-    """Upload a file for RAG ingestion"""
+@router.post("/agents/{agent_id}/files", response_model=FileResponse)
+async def upload_file_to_agent(
+    agent_id: str, 
+    file: UploadFile = FastAPIFile(...), 
+    db: Session = Depends(get_db)
+):
+    """Upload a file to a specific agent for RAG ingestion"""
+    # Verify agent exists
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
     try:
         # Generate unique ID and filepath
         file_id = str(uuid.uuid4())
@@ -68,17 +73,18 @@ async def upload_file(file: UploadFile = FastAPIFile(...), db: Session = Depends
             id=file_id,
             name=file.filename,
             filepath=filepath,
-            size=file_size
+            size=file_size,
+            agent_id=agent_id
         )
         db.add(new_file)
         db.commit()
         db.refresh(new_file)
         
-        # Trigger RAG ingestion
+        # Trigger RAG ingestion into agent-specific collection
         try:
-            vsm = get_vector_store_manager()
+            vsm = VectorStoreManager(agent_id=agent_id)
             vsm.ingest_file(filepath)
-            print(f"✓ File {file.filename} ingested into vector store")
+            print(f"✓ File {file.filename} ingested into agent {agent.name}'s vector store")
         except Exception as e:
             print(f"⚠️  Warning: Failed to ingest file into vector store: {e}")
             # Don't fail the upload if ingestion fails
@@ -92,10 +98,14 @@ async def upload_file(file: UploadFile = FastAPIFile(...), db: Session = Depends
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/files/{file_id}")
-async def delete_file(file_id: str, db: Session = Depends(get_db)):
-    """Delete a file"""
-    file = db.query(File).filter(File.id == file_id).first()
+@router.delete("/agents/{agent_id}/files/{file_id}")
+async def delete_agent_file(agent_id: str, file_id: str, db: Session = Depends(get_db)):
+    """Delete a file from a specific agent"""
+    file = db.query(File).filter(
+        File.id == file_id,
+        File.agent_id == agent_id
+    ).first()
+    
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
     
@@ -106,4 +116,8 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
     # Delete from database
     db.delete(file)
     db.commit()
+    
+    # Note: Vector embeddings remain in ChromaDB collection
+    # Could add cleanup logic here if needed
+    
     return {"message": "File deleted successfully"}

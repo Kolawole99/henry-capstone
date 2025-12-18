@@ -9,12 +9,11 @@ from src.server.utils.vector_store import VectorStoreManager
 from src.server.utils.prompt_loader import load_prompt
 
 class SpecialistAgent:
-    def __init__(self, vector_store_manager: VectorStoreManager):
+    def __init__(self):
         base_url = os.getenv("OPENAI_BASE_URL")
         self.llm = ChatOpenAI(model="gpt-4o", temperature=0, base_url=base_url)
-        self.retriever = vector_store_manager.get_retriever()
         
-    def generate_response(self, query: UserQuery, routing: RoutingDecision) -> AgentResponse:
+    def generate_response(self, query: UserQuery, routing: RoutingDecision, agent_id: str = None) -> AgentResponse:
         # Load department-specific prompt
         prompt_file_map = {
             "HR": "specialist_hr",
@@ -26,6 +25,15 @@ class SpecialistAgent:
         dept_context = load_prompt(prompt_name)
 
         system_prompt = f"{dept_context}\n\n{{context}}"
+        
+        # Create agent-specific retriever if agent_id provided
+        if agent_id:
+            vector_store_manager = VectorStoreManager(agent_id=agent_id)
+            retriever = vector_store_manager.get_retriever()
+        else:
+            # Fallback to general collection if no agent specified
+            vector_store_manager = VectorStoreManager()
+            retriever = vector_store_manager.get_retriever()
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -33,7 +41,7 @@ class SpecialistAgent:
         ])
 
         question_answer_chain = create_stuff_documents_chain(self.llm, prompt)
-        rag_chain = create_retrieval_chain(self.retriever, question_answer_chain)
+        rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
         response = rag_chain.invoke({"input": query.query_text})
         

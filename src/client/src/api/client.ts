@@ -48,22 +48,24 @@ export const api = {
     await fetch(`${API_BASE_URL}/agents/${id}`, { method: 'DELETE' });
   },
 
-  async uploadFile(file: File): Promise<FileInfo> {
+  async getAgentFiles(agentId: string): Promise<FileInfo[]> {
+    const response = await fetch(`${API_BASE_URL}/agents/${agentId}/files`);
+    return response.json();
+  },
+
+  async uploadFileToAgent(agentId: string, file: File): Promise<FileInfo> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch(`${API_BASE_URL}/files`, {
+    const response = await fetch(`${API_BASE_URL}/agents/${agentId}/files`, {
       method: 'POST',
       body: formData,
     });
     return response.json();
   },
 
-  async getFiles(): Promise<FileInfo[]> {
-    const response = await fetch(`${API_BASE_URL}/files`);
-    return response.json();
-  },
-
-  async deleteFile(id: string): Promise<void> {
-    await fetch(`${API_BASE_URL}/files/${id}`, { method: 'DELETE' });
+  async deleteAgentFile(agentId: string, fileId: string): Promise<void> {
+    await fetch(`${API_BASE_URL}/agents/${agentId}/files/${fileId}`, {
+      method: 'DELETE'
+    });
   },
 };

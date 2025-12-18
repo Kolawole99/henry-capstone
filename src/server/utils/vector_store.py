@@ -7,9 +7,12 @@ from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
 class VectorStoreManager:
-    def __init__(self, data_path: str = "data", collection_name: str = "nexus_mind_docs"):
+    def __init__(self, agent_id: str = None, data_path: str = "data"):
         self.data_path = data_path
-        self.collection_name = collection_name
+        self.agent_id = agent_id
+        # Use agent-specific collection name if agent_id provided
+        self.collection_name = f"agent_{agent_id}" if agent_id else "nexus_mind_docs"
+        
         base_url = os.getenv("OPENAI_BASE_URL")
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", base_url=base_url)
         self.vector_store = None

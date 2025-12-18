@@ -3,22 +3,18 @@ from src.server.models.schemas import UserQuery
 from src.server.agents.dispatcher import DispatcherAgent
 from src.server.agents.specialist import SpecialistAgent
 from src.server.agents.auditor import AuditorAgent
-from src.server.utils.vector_store import VectorStoreManager
 
 class Coordinator:
     def __init__(self):
         print("Initializing Nexus-Mind Agents...")
-        self.vector_store_manager = VectorStoreManager()
-        # Ensure data is ready (simple check)
-        self.vector_store_manager.ingest_data()
         
         self.dispatcher = DispatcherAgent()
-        self.specialist = SpecialistAgent(self.vector_store_manager)
+        self.specialist = SpecialistAgent()
         self.auditor = AuditorAgent()
         print("System Ready.")
 
     # @observe(as_type="generation")
-    def process_query(self, query_text: str, user_role: str = "employee"):
+    def process_query(self, query_text: str, user_role: str = "employee", agent_id: str = None):
         print(f"\n--- Processing Query: {query_text} ---")
         
         # 1. Parse Input
@@ -39,7 +35,7 @@ class Coordinator:
 
         # 3. Specialist Execution (RAG)
         print(f"Specialist ({routing.department}) working...")
-        agent_response = self.specialist.generate_response(query, routing)
+        agent_response = self.specialist.generate_response(query, routing, agent_id=agent_id)
         print(f"Draft Answer: {agent_response.answer[:100]}...")
 
         # 4. Audit
