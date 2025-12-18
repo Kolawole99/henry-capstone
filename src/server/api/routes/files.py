@@ -8,8 +8,10 @@ import shutil
 
 from ..database import get_db, File, Agent
 from ...utils.vector_store import VectorStoreManager
+from ...utils.logger import get_logger, log_error
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 # Upload directory
 UPLOAD_DIR = "data/uploads"
@@ -31,9 +33,21 @@ async def list_agent_files(agent_id: str, db: Session = Depends(get_db)):
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
+        logger.warning(f"Agent not found when listing files", extra={
+            'extra_fields': {'agent_id': agent_id}
+        })
         raise HTTPException(status_code=404, detail="Agent not found")
     
     files = db.query(File).filter(File.agent_id == agent_id).all()
+    
+    logger.info(f"Listed files for agent", extra={
+        'extra_fields': {
+            'agent_id': agent_id,
+            'agent_name': agent.name,
+            'file_count': len(files)
+        }
+    })
+    
     return [
         FileResponse(
             id=f.id,
@@ -54,12 +68,24 @@ async def upload_file_to_agent(
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
+        logger.warning(f"Agent not found when uploading file", extra={
+            'extra_fields': {'agent_id': agent_id}
+        })
         raise HTTPException(status_code=404, detail="Agent not found")
     
     try:
         # Generate unique ID and filepath
         file_id = str(uuid.uuid4())
         filepath = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
+        
+        logger.info(f"Uploading file", extra={
+            'extra_fields': {
+                'agent_id': agent_id,
+                'agent_name': agent.name,
+                'filename': file.filename,
+                'file_id': file_id
+            }
+        })
         
         # Save file
         with open(filepath, "wb") as buffer:
@@ -84,9 +110,22 @@ async def upload_file_to_agent(
         try:
             vsm = VectorStoreManager(agent_id=agent_id)
             vsm.ingest_file(filepath)
-            print(f"✓ File {file.filename} ingested into agent {agent.name}'s vector store")
+            logger.info(f"File ingested into vector store", extra={
+                'extra_fields': {
+                    'agent_id': agent_id,
+                    'agent_name': agent.name,
+                    'filename': file.filename,
+                    'file_size': file_size
+                }
+            })
         except Exception as e:
-            print(f"⚠️  Warning: Failed to ingest file into vector store: {e}")
+            logger.warning(f"Failed to ingest file into vector store", extra={
+                'extra_fields': {
+                    'agent_id': agent_id,
+                    'filename': file.filename,
+                    'error': str(e)
+                }
+            })
             # Don't fail the upload if ingestion fails
         
         return FileResponse(
@@ -96,6 +135,12 @@ async def upload_file_to_agent(
             uploadedAt=new_file.uploaded_at.isoformat()
         )
     except Exception as e:
+        log_error(
+            error=e,
+            context="upload_file_to_agent",
+            agent_id=agent_id,
+            filename=file.filename
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/agents/{agent_id}/files/{file_id}")
@@ -107,17 +152,35 @@ async def delete_agent_file(agent_id: str, file_id: str, db: Session = Depends(g
     ).first()
     
     if not file:
+        logger.warning(f"File not found for deletion", extra={
+            'extra_fields': {
+                'agent_id': agent_id,
+                'file_id': file_id
+            }
+        })
         raise HTTPException(status_code=404, detail="File not found")
     
+    filename = file.name
+    filepath = file.filepath
+    
     # Delete physical file
-    if os.path.exists(file.filepath):
-        os.remove(file.filepath)
+    if os.path.exists(filepath):
+        os.remove(filepath)
     
     # Delete from database
     db.delete(file)
     db.commit()
     
+    logger.info(f"Deleted file", extra={
+        'extra_fields': {
+            'agent_id': agent_id,
+            'file_id': file_id,
+            'filename': filename
+        }
+    })
+    
     # Note: Vector embeddings remain in ChromaDB collection
     # Could add cleanup logic here if needed
     
     return {"message": "File deleted successfully"}
+

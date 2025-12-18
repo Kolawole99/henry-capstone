@@ -6,8 +6,10 @@ import uuid
 
 from ..database import get_db, ChatSession, ChatMessage
 from ...agents.coordinator import Coordinator
+from ...utils.logger import get_logger, log_error
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 # Initialize coordinator (singleton)
 coordinator = None
@@ -43,7 +45,11 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             db.add(session)
             db.commit()
             db.refresh(session)
-            print(f"✓ Created new session: {session.id}")
+            logger.info("Created new chat session", extra={
+                'extra_fields': {
+                    'session_id': session.id
+                }
+            })
         
         user_message = ChatMessage(
             session_id=session.id,
@@ -52,17 +58,35 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
         db.add(user_message)
         db.commit()
-        print(f"✓ Saved user message")
+        logger.info("Saved user message", extra={
+            'extra_fields': {
+                'session_id': session.id,
+                'message_length': len(request.message)
+            }
+        })
         
         # Process query through coordinator
-        print(f"🤖 Processing through coordinator...")
+        logger.info("Processing query through coordinator", extra={
+            'extra_fields': {
+                'session_id': session.id,
+                'agent_id': request.agent_id
+            }
+        })
+        
         coord = get_coordinator() # Ensure coordinator is initialized
         result = coord.process_query(
             query_text=request.message,
             user_role="employee",
             agent_id=request.agent_id
         )
-        print(f"✓ Got response from {result.get('agent_name', 'Unknown')}")
+        
+        logger.info("Received response from agent", extra={
+            'extra_fields': {
+                'session_id': session.id,
+                'agent_name': result.get('agent_name', 'Unknown'),
+                'sources_count': len(result.get('sources', []))
+            }
+        })
         
         assistant_message = ChatMessage(
             session_id=session.id,
@@ -72,8 +96,12 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
         db.add(assistant_message)
         db.commit()
-        print(f"✓ Saved assistant message")
-        print(f"{'='*60}\n")
+        logger.info("Saved assistant message", extra={
+            'extra_fields': {
+                'session_id': session.id,
+                'response_length': len(result["final_answer"])
+            }
+        })
         
         return ChatResponse(
             response=result["final_answer"],
@@ -82,15 +110,12 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             sources=result.get("sources", [])
         )
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"\n{'='*60}")
-        print(f"❌ ERROR in chat endpoint:")
-        print(f"Error type: {type(e).__name__}")
-        print(f"Error message: {str(e)}")
-        print(f"\nFull traceback:")
-        print(error_details)
-        print(f"{'='*60}\n")
+        log_error(
+            error=e,
+            context="chat_endpoint",
+            session_id=request.session_id,
+            message=request.message[:100]
+        )
         
         raise HTTPException(
             status_code=500,
@@ -100,3 +125,4 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
                 "message": "An error occurred while processing your request. Please check the server logs for details."
             }
         )
+

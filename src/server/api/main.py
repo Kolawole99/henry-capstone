@@ -7,6 +7,12 @@ load_dotenv()
 
 from .database import init_db
 from .routes import chat, agents, files
+from .middleware import LoggingMiddleware
+from ..utils.logger import setup_logging, get_logger
+
+# Initialize logging system
+setup_logging(log_level=os.getenv("LOG_LEVEL", "INFO"))
+logger = get_logger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -14,6 +20,9 @@ app = FastAPI(
     description="Multi-Agent Corporate Knowledge System API",
     version="1.0.0"
 )
+
+# Add logging middleware (should be first to capture all requests)
+app.add_middleware(LoggingMiddleware)
 
 # CORS middleware for frontend
 app.add_middleware(
@@ -32,11 +41,21 @@ app.include_router(files.router, tags=["files"])
 # Initialize database on startup
 @app.on_event("startup")
 async def startup_event():
-    print("Initializing database...")
+    logger.info("Starting Nexus-Mind API server")
+    logger.info("Initializing database...")
     init_db()
-    print("Database initialized successfully")
-    print(f"API server ready at http://0.0.0.0:8000")
-    print(f"API docs available at http://0.0.0.0:8000/docs")
+    logger.info("Database initialized successfully")
+    logger.info("API server ready", extra={
+        'extra_fields': {
+            'host': '0.0.0.0',
+            'port': 8001,
+            'docs_url': 'http://0.0.0.0:8001/docs'
+        }
+    })
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down Nexus-Mind API server")
 
 @app.get("/")
 async def root():
@@ -49,3 +68,4 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
