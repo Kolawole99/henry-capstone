@@ -9,3 +9,8 @@ langfuse
 python-dotenv
 tiktoken
 pypdf
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-multipart

@@ -31,9 +31,9 @@ export function ChatPage() {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage: Message = { 
-        role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.' 
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -42,7 +42,7 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
+    <div className="flex flex-col max-w-4xl mx-auto p-4" style={{ height: 'calc(100vh - 60px)' }}>
       <div className="mb-4 flex items-center gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Bot className="w-8 h-8" />
@@ -64,7 +64,7 @@ export function ChatPage() {
         )}
       </div>
 
-      <Card className="flex-1 overflow-y-auto p-4 mb-4 space-y-4">
+      <Card className="flex-1 overflow-y-auto p-4 mb-4 space-y-4 min-h-0">
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground py-12">
             <Bot className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -77,11 +77,10 @@ export function ChatPage() {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                msg.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted'
-              }`}
+              className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.role === 'user'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted'
+                }`}
             >
               {msg.content}
             </div>

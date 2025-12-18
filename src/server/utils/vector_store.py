@@ -56,6 +56,38 @@ class VectorStoreManager:
         
         print(f"Ingested {len(splits)} chunks into ChromaDB.")
 
+    def ingest_file(self, filepath: str):
+        """Ingest a single file into the vector store."""
+        if not self.client:
+            raise ValueError("ChromaDB client not initialized. Is the Docker container running?")
+        
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"File not found: {filepath}")
+        
+        # Load the file
+        loader = TextLoader(filepath)
+        docs = loader.load()
+        
+        if not docs:
+            print(f"No content found in file: {filepath}")
+            return
+        
+        # Split documents
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        
+        # Get or create vector store
+        if not self.vector_store:
+            self.vector_store = Chroma(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding_function=self.embeddings,
+            )
+        
+        # Add documents
+        self.vector_store.add_documents(documents=splits)
+        print(f"Ingested {len(splits)} chunks from {os.path.basename(filepath)} into ChromaDB.")
+
     def get_retriever(self):
         """Returns a retriever for the vector store."""
         if not self.client:
