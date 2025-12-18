@@ -20,11 +20,11 @@ export interface FileInfo {
 }
 
 export const api = {
-  async chat(message: string, agentId?: string): Promise<string> {
+  async chat(message: string, sessionId: string, agentId?: string): Promise<string> {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, agent_id: agentId }),
+      body: JSON.stringify({ message, session_id: sessionId, agent_id: agentId }),
     });
     const data = await response.json();
     return data.response;

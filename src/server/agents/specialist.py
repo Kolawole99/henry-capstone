@@ -52,5 +52,5 @@ class SpecialistAgent:
         return AgentResponse(
             answer=response["answer"],
             sources=unique_sources,
-            agent_name=f"{routing.department}_Specialist"
+            agent_name=routing.agent_name
         )

@@ -10,6 +10,7 @@ export function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionId] = useState(() => crypto.randomUUID());
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -20,16 +21,38 @@ export function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await api.chat(input);
+      const response = await api.chat(input, sessionId);
       const assistantMessage: Message = { role: 'assistant', content: response };
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error);
-      const errorMessage: Message = {
+
+      let errorMessage = 'Sorry, I encountered an error. Please try again.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      try {
+        const errorText = await error.text?.();
+        if (errorText) {
+          const errorData = JSON.parse(errorText);
+          if (errorData.detail) {
+            if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail;
+            } else if (errorData.detail.message) {
+              errorMessage = errorData.detail.message;
+            }
+          }
+        }
+      } catch (parseError) {
+        // Ignore parsing errors, use default message
+      }
+
+      const errorMessageObj: Message = {
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.'
+        content: `❌ Error: ${errorMessage}`
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setLoading(false);
     }

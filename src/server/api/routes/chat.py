@@ -32,45 +32,71 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, db: Session = Depends(get_db)):
-    """Send a message and get AI response"""
+    """
+    Process a chat message and return a response.
+    Uses the coordinator to route to appropriate agent and generate response.
+    """
     try:
-        # Get or create session
-        session_id = request.session_id or str(uuid.uuid4())
-        session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+        session = db.query(ChatSession).filter(ChatSession.id == request.session_id).first()
         if not session:
-            session = ChatSession(id=session_id)
+            session = ChatSession(id=request.session_id)
             db.add(session)
             db.commit()
+            db.refresh(session)
+            print(f"✓ Created new session: {session.id}")
         
-        # Store user message
         user_message = ChatMessage(
-            session_id=session_id,
+            session_id=session.id,
             role="user",
-            content=request.message,
-            agent_id=request.agent_id
+            content=request.message
         )
         db.add(user_message)
         db.commit()
+        print(f"✓ Saved user message")
         
-        # Get AI response from coordinator
-        coord = get_coordinator()
-        result = coord.process_query(request.message, agent_id=request.agent_id)
+        # Process query through coordinator
+        print(f"🤖 Processing through coordinator...")
+        coord = get_coordinator() # Ensure coordinator is initialized
+        result = coord.process_query(
+            query_text=request.message,
+            user_role="employee",
+            agent_id=request.agent_id
+        )
+        print(f"✓ Got response from {result.get('agent_name', 'Unknown')}")
         
-        # Store assistant message
         assistant_message = ChatMessage(
-            session_id=session_id,
+            session_id=session.id,
             role="assistant",
             content=result["final_answer"],
             agent_id=request.agent_id
         )
         db.add(assistant_message)
         db.commit()
+        print(f"✓ Saved assistant message")
+        print(f"{'='*60}\n")
         
         return ChatResponse(
             response=result["final_answer"],
-            session_id=session_id,
+            session_id=session.id,
             department=result.get("agent_name", "General"),
             sources=result.get("sources", [])
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"\n{'='*60}")
+        print(f"❌ ERROR in chat endpoint:")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"\nFull traceback:")
+        print(error_details)
+        print(f"{'='*60}\n")
+        
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "type": type(e).__name__,
+                "message": "An error occurred while processing your request. Please check the server logs for details."
+            }
+        )
