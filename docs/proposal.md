@@ -2,10 +2,12 @@
 
 ## 1. Problem Statement
 
-In rapidly scaling organizations, "Institutional Memory" is often fragmented and siloed across individuals, Slack threads, PDF manuals, and various cloud drives. This leads to three primary pain points:
+In rapidly scaling organizations, "Institutional Memory" is fragmented and siloed across individuals, Slack threads, PDF manuals, and various cloud drives. This leads to three primary pain points:
 
-* **Onboarding Friction:** New hires spend 20-30% of their first three month searching for basic information, gaining context, or technical setup guides.
-* **Information Attrition:** When senior employees leave, their localized knowledge of "how things are done" (e.g., handling Slack disputesmanaging specific customers, or legacy system quirks) vanishes.
+* **Onboarding Friction:** New hires spend 20-30% of their first three months searching for basic information, gaining context, or technical setup guides.
+
+* **Information Attrition:** When senior employees leave, their localized knowledge of "how things are done" (e.g., handling Slack disputes, managing specific customers, or legacy system quirks) vanishes.
+
 * **Siloed Inefficiency:** HR questions are often directed to Technical leads, and technical queries clutter HR channels, causing "context-switching" fatigue for department heads.
 
 **Target Audience:** Mid-to-large scale enterprises and remote-first startups where asynchronous information retrieval is critical for operational continuity.
@@ -20,9 +22,9 @@ In rapidly scaling organizations, "Institutional Memory" is often fragmented and
 
 ### User Workflow:
 
-1. **Ingestion:** Admins upload context documents (PDF/Text/Images) to department-specific folders.
+1. **Ingestion:** Admins upload context documents (PDF/Text) to agent-specific folders.
 2. **Query:** An employee asks a complex question (e.g., "What is the disciplinary process for Slack harassment, and who do I notify?").
-3. **Coordination:** The system validates the input, routes it to the specialized HR Agent, retrieves the specific policy from a Vector Store, and has a separate Auditor Agent verify the tone before replying.
+3. **Coordination:** The system validates the input, routes it to the specialized agent, retrieves the specific policy from a Vector Store, and has a separate Auditor Agent verify the tone and quality before replying.
 
 ### Value Proposition:
 
@@ -34,8 +36,8 @@ Nexus-Mind transforms static documents into an active "living" consultant. It re
 
 | Scenario | User Action | Multi-Agent Collaborative Result |
 | --- | --- | --- |
-| **HR Conflict** | Employee asks about handling slurs or "fighting" on Slack. | **Dispatcher** identifies "HR/Legal" intent. **HR Specialist** retrieves the "Code of Conduct" PDF. **Auditor** ensures the response includes specific reporting links. |
-| **Technical Onboarding** | New dev asks: "How do I rotate my API keys for the production DB?" | **Dispatcher** routes to "Technical Agent." Agent queries the internal Wiki. **Auditor** checks if the instructions match current security protocols. |
+| **HR Conflict** | Employee asks about handling slurs or "fighting" on Slack. | **Dispatcher** identifies "HR/Legal" intent. **HR Specialist** retrieves the "Code of Conduct" PDF. **Auditor** ensures the response includes specific reporting links and professional tone. |
+| **Technical Onboarding** | New dev asks: "How do I rotate my API keys for the production DB?" | **Dispatcher** routes to "IT Support Agent." Agent queries the internal Wiki. **Auditor** checks if the instructions match current security protocols. |
 | **Policy Comparison** | "Is our maternity leave policy different for contractors vs full-time?" | **Specialist Agent** performs a multi-document RAG lookup, comparing two different policy files to provide a structured comparison table. |
 
 ---
@@ -53,11 +55,11 @@ This initiative directly addresses four strategic imperatives:
 
 ## 5. Success Criteria (Measurable Outcomes)
 
-1. **Accuracy (RAG Faithfulness):** Achieving ≥85% accuracy in retrieving the correct document segment (measured via RAGAS or manual audit).
+1. **Accuracy (RAG Faithfulness):** Achieving ≥85% accuracy in retrieving the correct document segment (measured via manual audit).
 2. **Resolution Speed:** Reducing the time to find a specific policy from minutes (searching drives) to <10 seconds.
-3. **Routing Precision:** The Dispatcher Agent correctly identifies the department (HR vs. Tech) in 95% of test cases.
+3. **Routing Precision:** The Dispatcher Agent correctly identifies the appropriate agent in 95% of test cases.
 4. **Formatting Compliance:** 100% of outputs must follow the **Pydantic** schema for structured corporate responses.
-5. **User Satisfaction:** Positive feedback from test users on the "Helpfulness" and "Safety" of the Auditor Agent’s filtered responses.
+5. **User Satisfaction:** Positive feedback from test users on the "Helpfulness" and "Safety" of the Auditor Agent's filtered responses.
 
 ---
 
@@ -65,16 +67,17 @@ This initiative directly addresses four strategic imperatives:
 
 ### Multi-Agent Coordination Pattern: **Hierarchical Delegation**
 
-We will use a **Sequential + Evaluator** pattern.
+We use a **Sequential + Evaluator** pattern with four specialized agents:
 
-* **Agent 1 (The Dispatcher):** Acts as the brain. It uses **Pydantic** to parse user intent into a structured object.
-* **Agent 2 (The Domain Specialist):** Equipped with **LangChain** Retrieval tools to query a **ChromaDB** Vector Store.
-* **Agent 3 (The Auditor):** Reviews the generated response against a "Corporate Tone & Safety" prompt to prevent hallucinations or unprofessional language.
+* **Agent 1 (The Coordinator):** Orchestrates the entire workflow and manages agent-to-agent communication.
+* **Agent 2 (The Dispatcher):** Acts as the brain. It uses **Pydantic** to parse user intent and route to the best agent based on AI analysis.
+* **Agent 3 (The Domain Specialist):** Equipped with **LangChain** Retrieval tools to query a **ChromaDB** Vector Store for relevant documents.
+* **Agent 4 (The Auditor):** Reviews the generated response against a "Corporate Tone & Safety" prompt to prevent hallucinations or unprofessional language, and provides quality scores.
 
 ### Integrated Technologies:
 
 * **LangChain:** For managing the orchestration, prompt templates, and tool-calling logic.
-* **Vector Store (ChromaDB):** Chosen for its ability to handle persistent document embeddings, allowing specific departments to have isolated "knowledge silos."
+* **Vector Store (ChromaDB):** Chosen for its ability to handle persistent document embeddings, allowing specific agents to have isolated "knowledge silos."
 * **Pydantic:** Used for strict data validation at the input level (sanitizing user queries) and the output level (ensuring the system returns a standard JSON structure).
 * **Langfuse:** Integrated for "Traceability." This allows us to see exactly which document chunks were retrieved and why an agent made a specific decision.
 
@@ -88,10 +91,14 @@ We will use a **Sequential + Evaluator** pattern.
 ## 7. Project Deliverables & Roadmap
 
 ### Phase 1: Core MVP (Current Scope)
-* **src/models/schemas.py:** Pydantic models for `UserQuery`, `RoutingDecision`, and `FinalResponse`.
-* **src/agents/specialist.py:** LangChain-based RAG agent.
-* **src/utils/vector_store.py:** Logic for document chunking, embedding, and storage.
+
+* **src/models/schemas.py:** Pydantic models for `UserQuery`, `RoutingDecision`, `AgentResponse`, `AuditResult`, and `SourceChunk`.
+* **src/agents/:** Implementation of Coordinator, Dispatcher, Specialist, and Auditor agents.
+* **src/utils/vector_store.py:** Logic for document chunking, embedding, and storage in ChromaDB.
+* **src/utils/logger.py:** Structured JSON logging for production observability.
+* **src/utils/validators.py:** Input validation and security checks.
 * **docs/README.md:** Full setup guide, architecture diagrams, and example commands.
+* **Frontend UI:** React + TypeScript chat interface with agent management.
 
 ### Phase 2: Enterprise Hardening (Upon MVP Greenlight)
 
@@ -101,3 +108,23 @@ We will use a **Sequential + Evaluator** pattern.
   - **Google Workspace & Microsoft OneDrive:** Live document synchronization to eliminate manual uploads.
   - **CRM Integration:** Real-time access to customer data for support agents while respecting PII boundaries and audit trails.
 
+---
+
+## 8. Why This Approach?
+
+**Multi-Agent Architecture** enables:
+- **Specialization:** Each agent optimized for its domain (HR uses empathetic tone, IT uses technical precision)
+- **Reliability:** Independent auditor prevents hallucinations
+- **Scalability:** Add new agents without affecting existing ones
+- **Observability:** Full tracing of each agent's contribution via Langfuse
+
+**RAG with Vector Stores** provides:
+- **Semantic Search:** Finds relevant policies even with different wording
+- **Source Attribution:** Every answer cites specific documents
+- **Knowledge Isolation:** Agent-specific collections prevent cross-contamination
+
+**Production Engineering** ensures:
+- **Type Safety:** Pydantic models prevent runtime errors
+- **Observability:** Structured logging and Langfuse tracing
+- **Security:** Input validation and sanitization
+- **Maintainability:** Modular architecture with clear separation of concerns
